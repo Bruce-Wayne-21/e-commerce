@@ -1,5 +1,5 @@
-# Azure Pipeline: deploy the static site to an Azure Blob Storage static website.
-# Pure HTML/CSS/JS — no build step. Uploads the files to the special $web container.
+# Multi-stage pipeline: Build the static site, then Deploy it to Azure Blob static website.
+# Flow:  push to master  ->  Build stage (package files)  ->  Deploy stage (upload to $web)
 
 trigger:
   branches:
@@ -10,40 +10,78 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  # ---- FILL THESE IN ----
-  azureSubscription: 'azure-lumen'  # Azure Resource Manager service connection
+  azureSubscription: 'azure-lumen'  # e.g. azure-lumen
   storageAccount: 'lumenstoresjp1030'
 
-steps:
-  - task: AzureCLI@2
+stages:
+# =========================================================
+# STAGE 1: BUILD  — package the static files as an artifact
+# =========================================================
+- stage: Build
+  displayName: 'Build'
+  jobs:
+  - job: Package
+    displayName: 'Package static site'
+    steps:
+    - task: CopyFiles@2
+      displayName: 'Collect site files'
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)'
+        Contents: |
+          **/*.html
+          **/*.css
+          **/*.js
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish artifact (site)'
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)'
+        artifact: 'site'
+
+# =========================================================
+# STAGE 2: DEPLOY — upload the artifact to the blob $web
+# Runs only if Build succeeded. Uses an environment so you
+# can add an approval gate in the DevOps UI if you want.
+# =========================================================
+- stage: Deploy
+  displayName: 'Deploy'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: DeployToBlob
     displayName: 'Deploy to Blob static website'
-    inputs:
-      azureSubscription: '$(azureSubscription)'
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        # Make sure the static website feature is on (safe to run every time)
-        az storage blob service-properties update \
-          --account-name $(storageAccount) \
-          --static-website \
-          --index-document index.html \
-          --404-document index.html \
-          --auth-mode login
+    environment: 'production'      # creates an "Environment" you can gate with approvals
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # the artifact is downloaded automatically to $(Pipeline.Workspace)/site
+          - task: AzureCLI@2
+            displayName: 'Upload to $web'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                # Ensure the static website feature is enabled (safe to re-run)
+                az storage blob service-properties update \
+                  --account-name $(storageAccount) \
+                  --static-website \
+                  --index-document index.html \
+                  --404-document index.html \
+                  --auth-mode login
 
-        # Upload the site files to the $web container
-        az storage blob upload-batch \
-          --account-name $(storageAccount) \
-          --source "$(Build.SourcesDirectory)" \
-          --destination '$web' \
-          --pattern "*.html" \
-          --pattern "*.css" \
-          --pattern "*.js" \
-          --overwrite \
-          --auth-mode login
+                # Upload the built files to the $web container
+                az storage blob upload-batch \
+                  --account-name $(storageAccount) \
+                  --source "$(Pipeline.Workspace)/site" \
+                  --destination '$web' \
+                  --overwrite \
+                  --auth-mode login
 
-        # Print the live site URL to the build log
-        echo "Site URL:"
-        az storage account show \
-          --name $(storageAccount) \
-          --query "primaryEndpoints.web" \
-          --output tsv
+                echo "Site URL:"
+                az storage account show \
+                  --name $(storageAccount) \
+                  --query "primaryEndpoints.web" \
+                  --output tsv
