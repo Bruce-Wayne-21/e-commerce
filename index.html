@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lumen — Modern Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ===== Header ===== -->
+  <header class="header">
+    <div class="header__inner">
+      <a href="#" class="logo" aria-label="Lumen home">
+        <span class="logo__dot"></span>Lumen
+      </a>
+
+      <div class="search">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path fill="currentColor" d="M10 2a8 8 0 1 0 4.9 14.32l5.39 5.39 1.42-1.42-5.39-5.39A8 8 0 0 0 10 2m0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12"/>
+        </svg>
+        <input id="searchInput" type="search" placeholder="Search products…" aria-label="Search products" />
+      </div>
+
+      <div class="header__actions">
+        <button id="themeToggle" class="icon-btn" aria-label="Toggle dark mode" title="Toggle theme">
+          <span id="themeIcon">🌙</span>
+        </button>
+        <button id="cartToggle" class="icon-btn cart-btn" aria-label="Open cart">
+          🛒
+          <span id="cartCount" class="cart-count" hidden>0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== Hero ===== -->
+  <section class="hero">
+    <div class="hero__content">
+      <p class="hero__eyebrow">New season · 2026</p>
+      <h1 class="hero__title">Thoughtfully made<br />everyday objects.</h1>
+      <p class="hero__sub">Curated essentials for work and home. Free shipping over $75.</p>
+      <a href="#shop" class="btn btn--primary">Shop the collection</a>
+    </div>
+  </section>
+
+  <!-- ===== Shop ===== -->
+  <main id="shop" class="shop">
+    <div class="shop__bar">
+      <div class="filters" id="filters" role="tablist" aria-label="Filter by category"></div>
+      <div class="shop__right">
+        <label class="sort">
+          Sort
+          <select id="sortSelect" aria-label="Sort products">
+            <option value="featured">Featured</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="rating">Top Rated</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div id="productGrid" class="grid" aria-live="polite"></div>
+    <p id="emptyState" class="empty" hidden>No products match your search.</p>
+  </main>
+
+  <footer class="footer">
+    <p>Lumen Store — a demo built with plain HTML, CSS &amp; JavaScript.</p>
+  </footer>
+
+  <!-- ===== Cart Drawer ===== -->
+  <div id="overlay" class="overlay" hidden></div>
+  <aside id="cartDrawer" class="drawer" aria-label="Shopping cart" aria-hidden="true">
+    <div class="drawer__head">
+      <h2>Your Cart</h2>
+      <button id="cartClose" class="icon-btn" aria-label="Close cart">✕</button>
+    </div>
+    <div id="cartItems" class="drawer__items"></div>
+    <div class="drawer__foot">
+      <div class="drawer__row">
+        <span>Subtotal</span>
+        <strong id="cartTotal">$0.00</strong>
+      </div>
+      <button id="checkoutBtn" class="btn btn--primary btn--block" disabled>Checkout</button>
+    </div>
+  </aside>
+
+  <!-- ===== Toast ===== -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
