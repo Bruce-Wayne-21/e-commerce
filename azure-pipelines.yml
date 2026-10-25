@@ -1,19 +1,49 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# Azure Pipeline: deploy the static site to an Azure Blob Storage static website.
+# Pure HTML/CSS/JS — no build step. Uploads the files to the special $web container.
 
 trigger:
-- master
+  branches:
+    include:
+      - master
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # ---- FILL THESE IN ----
+  azureSubscription: 'azure-lumen'  # Azure Resource Manager service connection
+  storageAccount: 'lumenstoresjp1030'
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+  - task: AzureCLI@2
+    displayName: 'Deploy to Blob static website'
+    inputs:
+      azureSubscription: '$(azureSubscription)'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        # Make sure the static website feature is on (safe to run every time)
+        az storage blob service-properties update \
+          --account-name $(storageAccount) \
+          --static-website \
+          --index-document index.html \
+          --404-document index.html \
+          --auth-mode login
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+        # Upload the site files to the $web container
+        az storage blob upload-batch \
+          --account-name $(storageAccount) \
+          --source "$(Build.SourcesDirectory)" \
+          --destination '$web' \
+          --pattern "*.html" \
+          --pattern "*.css" \
+          --pattern "*.js" \
+          --overwrite \
+          --auth-mode login
+
+        # Print the live site URL to the build log
+        echo "Site URL:"
+        az storage account show \
+          --name $(storageAccount) \
+          --query "primaryEndpoints.web" \
+          --output tsv
